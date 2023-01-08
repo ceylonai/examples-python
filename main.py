@@ -18,7 +18,7 @@ class WorldState(enum.Enum):
 class WorldSensing:
 
     def __init__(self):
-        self.env = gym.make("LunarLander-v2", render_mode="human")
+        self.env = gym.make("LunarLander-v2")
         self.state = WorldState.IDLE
         self.next_action = None
 
@@ -77,6 +77,7 @@ class AgentSensor:
             print("Terminated with avg reward: {}".format(avg_reward))
         else:
             self.rewards.append(reward)
+            print("reward: {}".format(reward))
             self.core.message({"receiver": "world", "data": {"action": random.randint(0, 3)}})
 
 
