@@ -2,3 +2,4 @@ rakun-python
 pygame
 gym[box2d]
 matplotlib
+moviepy
