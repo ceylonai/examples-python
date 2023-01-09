@@ -1,4 +1,5 @@
 import random
+from collections import namedtuple
 
 import rakun_python as rk
 
@@ -7,16 +8,45 @@ from agents import Agent
 
 @rk.Agent
 class CoordinatorAgent:
-    state = []
+    world_state = []
     rewards = []
     episode_index = 0
     steps = 0
 
+    agents_response = (None, None, None, None)
+
     async def run(self):
         pass
 
+    async def action(self):
+        while True:
+            ag_res = self.agents_response
+            leg_state_idea = ag_res[0]
+            position_idea = ag_res[1]
+            linear_velocity_idea = ag_res[2]
+            angular_velocity_idea = ag_res[3]
+            if leg_state_idea is not None \
+                    and position_idea is not None \
+                    and linear_velocity_idea is not None \
+                    and angular_velocity_idea is not None:
+                return random.randint(0, 3)
+
     async def receiver(self, sender, message):
-        self.state = message.data
+        print(f"Coordinator received message from {sender}")
+        if sender == Agent.World:
+            self.agents_response = (None, None, None, None)
+            await self.process_world_messages(message)
+        elif sender == Agent.LegStateAgent:
+            self.agents_response = (message.data, *self.agents_response[1:])
+        elif sender == Agent.PositionMangeAgent:
+            self.agents_response = (*self.agents_response[:1], message.data, *self.agents_response[2:])
+        elif sender == Agent.LinearVelocityAgent:
+            self.agents_response = (*self.agents_response[:2], message.data, *self.agents_response[3:])
+        elif sender == Agent.AngularVelocityAgent:
+            self.agents_response = (*self.agents_response[:3], message.data)
+
+    async def process_world_messages(self, message):
+        self.world_state = message.data
         begin_episode = message.data["begin_episode"]
         terminated = message.data["terminated"]
         observation = message.data["observation"]
@@ -28,7 +58,7 @@ class CoordinatorAgent:
             self.episode_index += 1
 
         if terminated:
-            self.state = []
+            self.world_state = []
             avg_reward = sum(self.rewards) / len(self.rewards)
             print(f"EP.{self.episode_index} Terminated with avg reward: {avg_reward}")
             if avg_reward > 1:
@@ -37,12 +67,13 @@ class CoordinatorAgent:
         else:
             self.rewards.append(reward)
             self.steps += 1
-            action = await self.process(observation)
-            await self.core.send({"receiver": Agent.World, "data": {"action": action}})
-            if self.steps % 20 == 0:
-                print(f"EP.{self.episode_index}-{self.steps} reward: {reward}")
+            await self.distribute_state(observation)
 
-    async def process(self, state):
+            action = await self.action()
+            await self.core.send({"receiver": Agent.World, "data": {"action": action}})
+            print(f"EP.{self.episode_index}-{self.steps} reward: {reward}")
+
+    async def distribute_state(self, state):
         lander_position = state[0:2]
         linear_velocity = state[2:4]
         angular_velocity = state[4:6]
@@ -52,5 +83,3 @@ class CoordinatorAgent:
         await self.core.send({"receiver": Agent.PositionMangeAgent, "data": {"state": lander_position}})
         await self.core.send({"receiver": Agent.LinearVelocityAgent, "data": {"state": linear_velocity}})
         await self.core.send({"receiver": Agent.AngularVelocityAgent, "data": {"state": angular_velocity}})
-
-        return random.randint(0, 3)
