@@ -4,6 +4,8 @@ import gym
 import rakun_python as rk
 from gym import wrappers
 
+from agents import Agent
+
 
 class WorldState(enum.Enum):
     IDLE = 0
@@ -29,7 +31,7 @@ class WorldSensing:
                 self.state = WorldState.RUNNING
                 observation, info = self.env.reset()
                 msg = {
-                    "receiver": "sensor",
+                    "receiver": Agent.CoordinatorAgent,
                     "data": {
                         "begin_episode": True,
                         "observation": observation.tolist(),
@@ -45,7 +47,7 @@ class WorldSensing:
                     self.env.unwrapped.render()
                     observation, reward, terminated, truncated, info = self.env.step(self.next_action)
                     msg = {
-                        "receiver": "sensor",
+                        "receiver": Agent.CoordinatorAgent,
                         "data": {
                             "begin_episode": False,
                             "observation": observation.tolist(),

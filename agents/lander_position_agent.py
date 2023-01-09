@@ -2,7 +2,7 @@ import rakun_python as rk
 
 
 @rk.Agent
-class LegStateAgent:
+class PositionMangeAgent:
 
     async def run(self):
         pass
