@@ -1,5 +1,4 @@
 import random
-from collections import namedtuple
 
 import rakun_python as rk
 
@@ -67,19 +66,23 @@ class CoordinatorAgent:
         else:
             self.rewards.append(reward)
             self.steps += 1
-            await self.distribute_state(observation)
+            await self.distribute_state(observation, reward)
 
             action = await self.action()
             await self.core.send({"receiver": Agent.World, "data": {"action": action}})
             print(f"EP.{self.episode_index}-{self.steps} reward: {reward}")
 
-    async def distribute_state(self, state):
+    async def distribute_state(self, state, reward):
         lander_position = state[0:2]
         linear_velocity = state[2:4]
         angular_velocity = state[4:6]
         leg_status = state[6:8]
 
-        await self.core.send({"receiver": Agent.LegStateAgent, "data": {"state": leg_status}})
-        await self.core.send({"receiver": Agent.PositionMangeAgent, "data": {"state": lander_position}})
-        await self.core.send({"receiver": Agent.LinearVelocityAgent, "data": {"state": linear_velocity}})
-        await self.core.send({"receiver": Agent.AngularVelocityAgent, "data": {"state": angular_velocity}})
+        await self.core.send(
+            {"receiver": Agent.LegStateAgent, "data": {"state": leg_status, "reward": reward}})
+        await self.core.send(
+            {"receiver": Agent.PositionMangeAgent, "data": {"state": lander_position, "reward": reward}})
+        await self.core.send(
+            {"receiver": Agent.LinearVelocityAgent, "data": {"state": linear_velocity, "reward": reward}})
+        await self.core.send(
+            {"receiver": Agent.AngularVelocityAgent, "data": {"state": angular_velocity, "reward": reward}})
